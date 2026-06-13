@@ -73,7 +73,7 @@ const AdminScreen = () => {
   // Validate admin access
   useEffect(() => {
     if (!userInfo || !userInfo.isAdmin) {
-      navigate('/login?redirect=admin');
+      navigate('/admin-login');
     }
   }, [userInfo, navigate]);
 

@@ -18,6 +18,7 @@ import CheckoutScreen from './screens/CheckoutScreen';
 import OrderScreen from './screens/OrderScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import AdminScreen from './screens/AdminScreen';
+import AdminLoginScreen from './screens/AdminLoginScreen';
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
               
               {/* Admin Panel Route */}
               <Route path="/admin" element={<AdminScreen />} />
+              <Route path="/admin-login" element={<AdminLoginScreen />} />
 
               {/* Redirect anything else to Home */}
               <Route path="*" element={<Navigate to="/" replace />} />

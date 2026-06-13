@@ -107,17 +107,6 @@ const Navbar = () => {
                       My Profile
                     </Link>
 
-                    {userInfo.isAdmin && (
-                      <Link
-                        to="/admin"
-                        onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-lg hover:bg-caramel-gold/10 hover:text-caramel-gold transition-all text-caramel-gold font-medium"
-                      >
-                        <Shield className="w-4 h-4" />
-                        Admin Panel
-                      </Link>
-                    )}
-
                     <hr className="my-1.5 border-caramel-gold/10" />
 
                     <button
@@ -206,17 +195,6 @@ const Navbar = () => {
                   <User className="w-4 h-4 text-caramel-gold" />
                   My Profile
                 </Link>
-
-                {userInfo.isAdmin && (
-                  <Link
-                    to="/admin"
-                    onClick={() => setMenuOpen(false)}
-                    className="px-4 py-2 rounded-lg hover:bg-caramel-gold/10 hover:text-caramel-gold transition-colors flex items-center gap-2 text-caramel-gold font-semibold"
-                  >
-                    <Shield className="w-4 h-4" />
-                    Admin Control Panel
-                  </Link>
-                )}
 
                 <button
                   onClick={() => {
