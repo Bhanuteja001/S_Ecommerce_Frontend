@@ -213,10 +213,10 @@ const CheckoutScreen = () => {
                 />
                 <div className="flex flex-col gap-1">
                   <span className="text-xs font-bold text-cream-light">
-                    Credit / Debit Card
+                    Razorpay (Card, UPI, NetBanking)
                   </span>
                   <span className="text-[10px] text-cream-medium/40 leading-normal">
-                    Pay securely using card. Payment is simulated for verification.
+                    Pay securely using Razorpay's payment gateway (supporting Cards, UPI, NetBanking).
                   </span>
                 </div>
               </button>

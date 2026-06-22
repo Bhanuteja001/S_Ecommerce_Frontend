@@ -56,6 +56,30 @@ export const payOrder = createAsyncThunk(
   }
 );
 
+export const createRazorpayOrder = createAsyncThunk(
+  'orders/createRazorpayOrder',
+  async (orderId, { rejectWithValue }) => {
+    try {
+      const { data } = await api.post(`/orders/${orderId}/razorpay-order`);
+      return data;
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  }
+);
+
+export const verifyRazorpayPayment = createAsyncThunk(
+  'orders/verifyRazorpayPayment',
+  async ({ orderId, paymentResult }, { rejectWithValue }) => {
+    try {
+      const { data } = await api.post(`/orders/${orderId}/verify-payment`, paymentResult);
+      return data;
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  }
+);
+
 export const getMyOrders = createAsyncThunk(
   'orders/getMyOrders',
   async (_, { rejectWithValue }) => {
@@ -150,6 +174,31 @@ const orderSlice = createSlice({
         state.order = action.payload;
       })
       .addCase(payOrder.rejected, (state, action) => {
+        state.payLoading = false;
+        state.payError = action.payload;
+      })
+      // Create Razorpay Order
+      .addCase(createRazorpayOrder.pending, (state) => {
+        state.payLoading = true;
+        state.paySuccess = false;
+        state.payError = null;
+      })
+      .addCase(createRazorpayOrder.rejected, (state, action) => {
+        state.payLoading = false;
+        state.payError = action.payload;
+      })
+      // Verify Razorpay Payment
+      .addCase(verifyRazorpayPayment.pending, (state) => {
+        state.payLoading = true;
+        state.paySuccess = false;
+        state.payError = null;
+      })
+      .addCase(verifyRazorpayPayment.fulfilled, (state, action) => {
+        state.payLoading = false;
+        state.paySuccess = true;
+        state.order = action.payload;
+      })
+      .addCase(verifyRazorpayPayment.rejected, (state, action) => {
         state.payLoading = false;
         state.payError = action.payload;
       })

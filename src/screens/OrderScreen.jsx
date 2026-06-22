@@ -2,9 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { CreditCard, Truck, Calendar, ShoppingBag, Landmark, User, Mail, ShieldAlert, Sparkles, RefreshCw } from 'lucide-react';
-import { getOrderDetails, payOrder, updateOrderStatus, resetOrderStatus } from '../slices/orderSlice';
+import { getOrderDetails, payOrder, updateOrderStatus, resetOrderStatus, createRazorpayOrder, verifyRazorpayPayment } from '../slices/orderSlice';
 import Spinner from '../components/Spinner';
 import Alert from '../components/Alert';
+
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 const OrderScreen = () => {
   const { id } = useParams();
@@ -46,8 +56,52 @@ const OrderScreen = () => {
     }
   }, [order]);
 
-  const handlePayOrder = () => {
-    dispatch(payOrder({ orderId: id }));
+  const handlePayOrder = async () => {
+    if (order.paymentMethod !== 'Card') {
+      dispatch(payOrder({ orderId: id }));
+      return;
+    }
+
+    const isLoaded = await loadRazorpayScript();
+    if (!isLoaded) {
+      alert('Razorpay SDK failed to load. Are you offline?');
+      return;
+    }
+
+    try {
+      const res = await dispatch(createRazorpayOrder(id)).unwrap();
+      const { keyId, razorpayOrder } = res;
+
+      const options = {
+        key: keyId,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        name: 'S_Ecommerce',
+        description: `Order ID: #${order._id}`,
+        image: 'https://images.unsplash.com/photo-1549007994-cb92ca8a7a72?q=80&w=600&auto=format&fit=crop',
+        order_id: razorpayOrder.id,
+        handler: async function (response) {
+          const paymentResult = {
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+          };
+          dispatch(verifyRazorpayPayment({ orderId: id, paymentResult }));
+        },
+        prefill: {
+          name: userInfo?.name || '',
+          email: userInfo?.email || '',
+        },
+        theme: {
+          color: '#C5A880',
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      console.error('Razorpay Error:', err);
+    }
   };
 
   const handleStatusUpdate = (e) => {
@@ -246,24 +300,41 @@ const OrderScreen = () => {
               </div>
             </div>
 
-            {/* Simulate payment for credit card orders */}
+            {/* Payment button for unpaid orders */}
             {!order.isPaid && (
-              <div className="mt-2 border-t border-caramel-gold/5 pt-4">
+              <div className="mt-2 border-t border-caramel-gold/5 pt-4 flex flex-col gap-2">
                 {payError && <Alert variant="danger">{payError}</Alert>}
-                <button
-                  onClick={handlePayOrder}
-                  disabled={payLoading}
-                  className="w-full flex items-center justify-center gap-2 bg-caramel-gold hover:bg-caramel-hover text-chocolate-darker font-bold uppercase tracking-wider text-xs py-3.5 rounded-xl transition-all shadow-md"
-                >
-                  {payLoading ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 animate-pulse" />
-                      Simulate Card Payment
-                    </>
-                  )}
-                </button>
+                {order.paymentMethod === 'Card' ? (
+                  <button
+                    onClick={handlePayOrder}
+                    disabled={payLoading}
+                    className="w-full flex items-center justify-center gap-2 bg-caramel-gold hover:bg-caramel-hover text-chocolate-darker font-bold uppercase tracking-wider text-xs py-3.5 rounded-xl transition-all shadow-md cursor-pointer"
+                  >
+                    {payLoading ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 animate-pulse" />
+                        Pay with Razorpay
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handlePayOrder}
+                    disabled={payLoading}
+                    className="w-full flex items-center justify-center gap-2 bg-caramel-gold/20 hover:bg-caramel-gold/30 text-caramel-gold border border-caramel-gold/30 font-bold uppercase tracking-wider text-xs py-3.5 rounded-xl transition-all shadow-md cursor-pointer"
+                  >
+                    {payLoading ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <ShieldAlert className="w-4 h-4" />
+                        Simulate Payment (COD)
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             )}
           </div>

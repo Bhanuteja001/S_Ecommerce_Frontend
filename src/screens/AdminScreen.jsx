@@ -14,7 +14,7 @@ const AdminScreen = () => {
   const navigate = useNavigate();
 
   const { userInfo } = useSelector((state) => state.auth);
-  
+
   // Redux lists
   const { products, loading: prodLoading, error: prodError, createSuccess: prodCreateSuccess, updateSuccess: prodUpdateSuccess, deleteSuccess: prodDeleteSuccess } = useSelector((state) => state.products);
   const { categories, loading: catLoading, error: catError, createSuccess: catCreateSuccess, updateSuccess: catUpdateSuccess, deleteSuccess: catDeleteSuccess } = useSelector((state) => state.categories);
@@ -22,6 +22,12 @@ const AdminScreen = () => {
 
   // Active Tab
   const [activeTab, setActiveTab] = useState('products');
+
+  // Single Product view dropdown and pagination
+  const [selectedProductId, setSelectedProductId] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Modal / Form state
   const [showProductForm, setShowProductForm] = useState(false);
@@ -34,7 +40,7 @@ const AdminScreen = () => {
   const [productCocoa, setProductCocoa] = useState(50);
   const [productNutFree, setProductNutFree] = useState(false);
   const [productImage, setProductImage] = useState('/uploads/placeholder-chocolate.jpg');
-  
+
   // Category Form State
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState(null);
@@ -327,80 +333,233 @@ const AdminScreen = () => {
     }
   };
 
+  // Filter products based on dropdown selection and search query
+  let filteredProducts = products;
+  
+  if (selectedProductId.startsWith('cat-')) {
+    const filterCatId = selectedProductId.substring(4);
+    filteredProducts = products.filter(
+      (p) => (p.category?._id || p.category) === filterCatId
+    );
+  }
+
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase().trim();
+    filteredProducts = filteredProducts.filter((p) => {
+      const nameMatch = p.name.toLowerCase().includes(q);
+      const idString = `CHOC-${p._id.slice(-6).toUpperCase()}`.toLowerCase();
+      const idMatch = idString.includes(q) || p._id.toLowerCase().includes(q);
+      return nameMatch || idMatch;
+    });
+  }
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in flex flex-col gap-8">
-      {/* Title */}
-      <div className="border-b border-caramel-gold/15 pb-5">
-        <span className="text-[10px] text-caramel-gold uppercase tracking-widest font-extrabold flex items-center gap-1.5">
-          <Shield className="w-4 h-4" />
-          Administrator Area
-        </span>
-        <h1 className="text-3xl font-extrabold text-cream-light mt-0.5">
-          ChocoLuxe Dashboard
-        </h1>
-      </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in flex flex-col lg:flex-row gap-8 items-start">
+      {/* Sidebar Navigation */}
+      <aside className="w-full lg:w-64 flex-shrink-0 flex flex-col gap-6 bg-chocolate-dark/65 backdrop-blur-md border border-caramel-gold/10 rounded-2xl p-6 w-full">
+        {/* Title */}
+        <div className="border-b border-caramel-gold/15 pb-4">
+          <span className="text-[10px] text-caramel-gold uppercase tracking-widest font-extrabold flex items-center gap-1.5">
+            <Shield className="w-4 h-4" />
+            Administrator Area
+          </span>
+          <h1 className="text-xl font-extrabold text-cream-light mt-0.5">
+            ChocoLuxe Admin
+          </h1>
+        </div>
 
-      {/* Tabs list */}
-      <div className="flex border-b border-caramel-gold/10 text-xs font-bold uppercase tracking-wider gap-6">
-        <button
-          onClick={() => setActiveTab('products')}
-          className={`py-3 flex items-center gap-2 border-b-2 transition-all ${
-            activeTab === 'products'
-              ? 'border-caramel-gold text-caramel-gold font-extrabold'
-              : 'border-transparent text-cream-medium/40 hover:text-cream-light'
-          }`}
-        >
-          <ShoppingBag className="w-4 h-4" />
-          Chocolates ({products.length})
-        </button>
+        {/* Sidebar Menu sections */}
+        <div className="flex flex-col gap-6 w-full">
+          {/* Section: Inventory */}
+          <div>
+            <span className="text-[10px] text-cream-medium/40 font-bold uppercase tracking-wider block mb-3">
+              Inventory
+            </span>
+            <div className="flex flex-col gap-1.5">
+              <button
+                onClick={() => setActiveTab('products')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all text-xs font-semibold cursor-pointer ${
+                  activeTab === 'products'
+                    ? 'bg-gradient-to-r from-caramel-gold to-caramel-hover text-chocolate-darker font-extrabold shadow-lg shadow-caramel-gold/15'
+                    : 'text-cream-medium/60 hover:text-cream-light hover:bg-caramel-gold/10'
+                }`}
+              >
+                <span className="flex items-center gap-2.5">
+                  <ShoppingBag className="w-4 h-4" />
+                  Chocolates
+                </span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  activeTab === 'products' ? 'bg-chocolate-darker text-caramel-gold' : 'bg-chocolate-darker/60 text-cream-medium/60 border border-caramel-gold/10'
+                }`}>
+                  {products.length}
+                </span>
+              </button>
 
-        <button
-          onClick={() => setActiveTab('categories')}
-          className={`py-3 flex items-center gap-2 border-b-2 transition-all ${
-            activeTab === 'categories'
-              ? 'border-caramel-gold text-caramel-gold font-extrabold'
-              : 'border-transparent text-cream-medium/40 hover:text-cream-light'
-          }`}
-        >
-          <FolderHeart className="w-4 h-4" />
-          Categories ({categories.length})
-        </button>
+              <button
+                onClick={() => setActiveTab('categories')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all text-xs font-semibold cursor-pointer ${
+                  activeTab === 'categories'
+                    ? 'bg-gradient-to-r from-caramel-gold to-caramel-hover text-chocolate-darker font-extrabold shadow-lg shadow-caramel-gold/15'
+                    : 'text-cream-medium/60 hover:text-cream-light hover:bg-caramel-gold/10'
+                }`}
+              >
+                <span className="flex items-center gap-2.5">
+                  <FolderHeart className="w-4 h-4" />
+                  Categories
+                </span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  activeTab === 'categories' ? 'bg-chocolate-darker text-caramel-gold' : 'bg-chocolate-darker/60 text-cream-medium/60 border border-caramel-gold/10'
+                }`}>
+                  {categories.length}
+                </span>
+              </button>
+            </div>
+          </div>
 
-        <button
-          onClick={() => setActiveTab('orders')}
-          className={`py-3 flex items-center gap-2 border-b-2 transition-all ${
-            activeTab === 'orders'
-              ? 'border-caramel-gold text-caramel-gold font-extrabold'
-              : 'border-transparent text-cream-medium/40 hover:text-cream-light'
-          }`}
-        >
-          <UserCheck className="w-4 h-4" />
-          Client Orders ({allOrders.length})
-        </button>
+          {/* Section: Management */}
+          <div>
+            <span className="text-[10px] text-cream-medium/40 font-bold uppercase tracking-wider block mb-3">
+              Management
+            </span>
+            <div className="flex flex-col gap-1.5">
+              <button
+                onClick={() => setActiveTab('orders')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all text-xs font-semibold cursor-pointer ${
+                  activeTab === 'orders'
+                    ? 'bg-gradient-to-r from-caramel-gold to-caramel-hover text-chocolate-darker font-extrabold shadow-lg shadow-caramel-gold/15'
+                    : 'text-cream-medium/60 hover:text-cream-light hover:bg-caramel-gold/10'
+                }`}
+              >
+                <span className="flex items-center gap-2.5">
+                  <UserCheck className="w-4 h-4" />
+                  Client Orders
+                </span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  activeTab === 'orders' ? 'bg-chocolate-darker text-caramel-gold' : 'bg-chocolate-darker/60 text-cream-medium/60 border border-caramel-gold/10'
+                }`}>
+                  {allOrders.length}
+                </span>
+              </button>
 
-        <button
-          onClick={() => setActiveTab('users')}
-          className={`py-3 flex items-center gap-2 border-b-2 transition-all ${
-            activeTab === 'users'
-              ? 'border-caramel-gold text-caramel-gold font-extrabold'
-              : 'border-transparent text-cream-medium/40 hover:text-cream-light'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          Users ({users.length})
-        </button>
-      </div>
+              <button
+                onClick={() => setActiveTab('users')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all text-xs font-semibold cursor-pointer ${
+                  activeTab === 'users'
+                    ? 'bg-gradient-to-r from-caramel-gold to-caramel-hover text-chocolate-darker font-extrabold shadow-lg shadow-caramel-gold/15'
+                    : 'text-cream-medium/60 hover:text-cream-light hover:bg-caramel-gold/10'
+                }`}
+              >
+                <span className="flex items-center gap-2.5">
+                  <Users className="w-4 h-4" />
+                  Users
+                </span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  activeTab === 'users' ? 'bg-chocolate-darker text-caramel-gold' : 'bg-chocolate-darker/60 text-cream-medium/60 border border-caramel-gold/10'
+                }`}>
+                  {users.length}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex-grow w-full lg:min-w-0 flex flex-col gap-6">
 
       {/* TAB CONTENT: PRODUCTS */}
       {activeTab === 'products' && (
         <div className="flex flex-col gap-6 animate-fade-in">
-          <div className="flex justify-between items-center bg-chocolate-dark/40 border border-caramel-gold/5 p-4 rounded-xl">
-            <span className="text-xs text-cream-medium/60 font-medium">
-              Artisanal recipes inventory management table.
-            </span>
+          {/* View Mode, Search & Add Control Bar */}
+          <div className="flex flex-col xl:flex-row gap-4 items-center justify-between bg-chocolate-dark/40 border border-caramel-gold/5 p-4 rounded-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full xl:w-auto flex-grow max-w-4xl">
+              {/* Dropdown Selector */}
+              <div className="flex flex-col gap-1 w-full sm:w-72">
+                <span className="text-[10px] text-cream-medium/60 font-semibold uppercase tracking-wider">
+                  Select Category or Chocolate:
+                </span>
+                <select
+                  value={selectedProductId}
+                  onChange={(e) => {
+                    setSelectedProductId(e.target.value);
+                    setSearchQuery(''); // Clear search query when changing dropdown
+                    setCurrentPage(1);
+                  }}
+                  className="bg-chocolate-darker border border-caramel-gold/20 rounded-xl py-2.5 px-3 text-xs text-cream-light focus:outline-none cursor-pointer w-full"
+                >
+                  <option value="all">All Chocolates (Table View)</option>
+                  
+                  {/* Category Filters */}
+                  <optgroup label="Category Filters">
+                    {categories.map((cat) => (
+                      <option key={cat._id} value={`cat-${cat._id}`}>
+                        Filter: {cat.name}
+                      </option>
+                    ))}
+                  </optgroup>
+
+                  {/* Specific Chocolates grouped by Category */}
+                  {categories.map((cat) => {
+                    const catProducts = products.filter(p => (p.category?._id || p.category) === cat._id);
+                    if (catProducts.length === 0) return null;
+                    return (
+                      <optgroup key={cat._id} label={cat.name}>
+                        {catProducts.map((prod) => (
+                          <option key={prod._id} value={prod._id}>
+                            {prod.name} (CHOC-{prod._id.slice(-6).toUpperCase()})
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
+
+                  {/* Fallback for chocolates without category */}
+                  {products.filter(p => !p.category).length > 0 && (
+                    <optgroup label="Uncategorized">
+                      {products.filter(p => !p.category).map((prod) => (
+                        <option key={prod._id} value={prod._id}>
+                          {prod.name} (CHOC-{prod._id.slice(-6).toUpperCase()})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+
+              {/* Search Input Box */}
+              <div className="flex flex-col gap-1 w-full sm:flex-1">
+                <span className="text-[10px] text-cream-medium/60 font-semibold uppercase tracking-wider">
+                  Quick Search by Name or ID:
+                </span>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      if (e.target.value) {
+                        setSelectedProductId('all');
+                      }
+                      setCurrentPage(1);
+                    }}
+                    placeholder="Type name (e.g. Belgian) or unique ID (e.g. E610C8)..."
+                    className="bg-chocolate-darker border border-caramel-gold/20 rounded-xl py-2.5 px-3.5 pr-10 text-xs text-cream-light focus:outline-none w-full"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-3 text-cream-medium hover:text-caramel-gold cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <button
               onClick={openNewProductForm}
-              className="flex items-center gap-2 bg-caramel-gold hover:bg-caramel-hover text-chocolate-darker text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all"
+              className="flex items-center gap-2 bg-caramel-gold hover:bg-caramel-hover text-chocolate-darker text-xs font-bold uppercase tracking-wider px-4 py-3 rounded-xl transition-all cursor-pointer w-full xl:w-auto justify-center self-end xl:mb-0.5"
             >
               <Plus className="w-4 h-4" />
               Add Chocolate
@@ -411,72 +570,243 @@ const AdminScreen = () => {
 
           {prodLoading ? (
             <div className="py-12"><Spinner /></div>
-          ) : (
-            <div className="glass-panel rounded-2xl border border-caramel-gold/10 overflow-hidden shadow-xl">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-caramel-gold/10 text-cream-medium/40 font-bold uppercase tracking-wider bg-chocolate-darker/50">
-                      <th className="py-3.5 px-4">Name</th>
-                      <th className="py-3.5 px-2">Category</th>
-                      <th className="py-3.5 px-2 text-center">Price</th>
-                      <th className="py-3.5 px-2 text-center">Stock</th>
-                      <th className="py-3.5 px-2 text-center">Cocoa %</th>
-                      <th className="py-3.5 px-2 text-center">Nut Free</th>
-                      <th className="py-3.5 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-caramel-gold/5 text-cream-medium/85 font-medium">
-                    {products.map((prod) => (
-                      <tr key={prod._id} className="hover:bg-caramel-gold/5 transition-colors">
-                        <td className="py-3 px-4 font-bold text-cream-light truncate max-w-[180px]">
-                          {prod.name}
-                        </td>
-                        <td className="py-3 px-2 text-caramel-gold text-[10px] font-bold uppercase tracking-wide">
-                          {prod.category?.name || 'Artisanal'}
-                        </td>
-                        <td className="py-3 px-2 text-center text-cream-light font-extrabold">
-                          ${prod.price.toFixed(2)}
-                        </td>
-                        <td className="py-3 px-2 text-center">
-                          <span className={prod.stock === 0 ? 'text-red-400' : 'text-cream-light'}>
-                            {prod.stock}
-                          </span>
-                        </td>
-                        <td className="py-3 px-2 text-center font-bold text-caramel-gold">
-                          {prod.cocoaPercentage}%
-                        </td>
-                        <td className="py-3 px-2 text-center">
-                          {prod.isNutFree ? (
-                            <span className="text-emerald-400">Yes</span>
-                          ) : (
-                            <span className="text-cream-medium/30">No</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex justify-end gap-1.5">
-                            <button
-                              onClick={() => openEditProductForm(prod)}
-                              className="p-1.5 rounded-lg border border-caramel-gold/20 text-cream-medium hover:text-caramel-gold hover:border-caramel-gold transition-colors"
-                              title="Edit chocolate"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteProduct(prod._id)}
-                              className="p-1.5 rounded-lg border border-red-500/10 text-cream-medium hover:text-red-400 hover:border-red-500/30 transition-colors"
-                              title="Delete chocolate"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
+          ) : (selectedProductId === 'all' || selectedProductId.startsWith('cat-')) ? (
+            /* PAGINATED TABLE VIEW (ALL OR FILTERED BY CATEGORY/SEARCH) */
+            <div className="flex flex-col gap-4">
+              <div className="glass-panel rounded-2xl border border-caramel-gold/10 overflow-hidden shadow-xl">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-caramel-gold/10 text-cream-medium/40 font-bold uppercase tracking-wider bg-chocolate-darker/50">
+                        <th className="py-3.5 px-4">Name & ID</th>
+                        <th className="py-3.5 px-2">Category</th>
+                        <th className="py-3.5 px-2 text-center">Price</th>
+                        <th className="py-3.5 px-2 text-center">Stock</th>
+                        <th className="py-3.5 px-2 text-center">Cocoa %</th>
+                        <th className="py-3.5 px-2 text-center">Nut Free</th>
+                        <th className="py-3.5 px-4 text-right">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-caramel-gold/5 text-cream-medium/85 font-medium">
+                      {filteredProducts.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" className="py-8 text-center text-cream-medium/55">
+                            No chocolates match your search query or category filter.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredProducts
+                          .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                          .map((prod) => (
+                            <tr key={prod._id} className="hover:bg-caramel-gold/5 transition-colors">
+                              <td className="py-3 px-4 truncate max-w-[220px]">
+                                <div className="font-bold text-cream-light">{prod.name}</div>
+                                <div className="text-[10px] text-cream-medium/40 font-mono mt-0.5">CHOC-{prod._id.slice(-6).toUpperCase()}</div>
+                              </td>
+                              <td className="py-3 px-2 text-caramel-gold text-[10px] font-bold uppercase tracking-wide">
+                                {prod.category?.name || 'Artisanal'}
+                              </td>
+                              <td className="py-3 px-2 text-center text-cream-light font-extrabold">
+                                ₹{prod.price.toFixed(2)}
+                              </td>
+                              <td className="py-3 px-2 text-center">
+                                <span className={prod.stock === 0 ? 'text-red-400' : 'text-cream-light'}>
+                                  {prod.stock}
+                                </span>
+                              </td>
+                              <td className="py-3 px-2 text-center font-bold text-caramel-gold">
+                                {prod.cocoaPercentage}%
+                              </td>
+                              <td className="py-3 px-2 text-center">
+                                {prod.isNutFree ? (
+                                  <span className="text-emerald-400">Yes</span>
+                                ) : (
+                                  <span className="text-cream-medium/30">No</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <div className="flex justify-end gap-1.5">
+                                  <button
+                                    onClick={() => openEditProductForm(prod)}
+                                    className="p-1.5 rounded-lg border border-caramel-gold/20 text-cream-medium hover:text-caramel-gold hover:border-caramel-gold transition-colors cursor-pointer"
+                                    title="Edit chocolate"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteProduct(prod._id)}
+                                    className="p-1.5 rounded-lg border border-red-500/10 text-cream-medium hover:text-red-400 hover:border-red-500/30 transition-colors cursor-pointer"
+                                    title="Delete chocolate"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
+
+              {/* PAGINATION CONTROLS */}
+              {Math.ceil(filteredProducts.length / itemsPerPage) > 1 && (
+                <div className="flex justify-between items-center bg-chocolate-dark/40 border border-caramel-gold/10 px-4 py-3.5 rounded-2xl">
+                  <div className="flex flex-1 justify-between sm:hidden">
+                    <button
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      className="relative inline-flex items-center rounded-xl border border-caramel-gold/20 bg-chocolate-dark px-4 py-2 text-xs font-bold text-cream-medium/70 hover:text-cream-light hover:border-caramel-gold disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      disabled={currentPage === Math.ceil(filteredProducts.length / itemsPerPage)}
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredProducts.length / itemsPerPage)))}
+                      className="relative ml-3 inline-flex items-center rounded-xl border border-caramel-gold/20 bg-chocolate-dark px-4 py-2 text-xs font-bold text-cream-medium/70 hover:text-cream-light hover:border-caramel-gold disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                    >
+                      Next
+                    </button>
+                  </div>
+                  <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between w-full">
+                    <div>
+                      <p className="text-xs text-cream-medium/50">
+                        Showing <span className="font-bold text-cream-light">{(currentPage - 1) * itemsPerPage + 1}</span> to{" "}
+                        <span className="font-bold text-cream-light">
+                          {Math.min(currentPage * itemsPerPage, filteredProducts.length)}
+                        </span>{" "}
+                        of <span className="font-bold text-cream-light">{filteredProducts.length}</span> results
+                      </p>
+                    </div>
+                    <div>
+                      <nav className="isolate inline-flex -space-x-px rounded-xl shadow-xs gap-1.5" aria-label="Pagination">
+                        <button
+                          disabled={currentPage === 1}
+                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          className="relative inline-flex items-center rounded-xl border border-caramel-gold/20 bg-chocolate-dark p-2 text-xs font-bold text-cream-medium/70 hover:text-cream-light hover:border-caramel-gold disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                        >
+                          &larr; Prev
+                        </button>
+                        {Array.from({ length: Math.ceil(filteredProducts.length / itemsPerPage) }, (_, i) => i + 1).map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`relative inline-flex items-center px-3.5 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                              currentPage === page
+                                ? "bg-caramel-gold border-caramel-gold text-chocolate-darker shadow-sm"
+                                : "bg-chocolate-dark border-caramel-gold/20 text-cream-medium/70 hover:text-cream-light hover:border-caramel-gold"
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        ))}
+                        <button
+                          disabled={currentPage === Math.ceil(filteredProducts.length / itemsPerPage)}
+                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredProducts.length / itemsPerPage)))}
+                          className="relative inline-flex items-center rounded-xl border border-caramel-gold/20 bg-chocolate-dark p-2 text-xs font-bold text-cream-medium/70 hover:text-cream-light hover:border-caramel-gold disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                        >
+                          Next &rarr;
+                        </button>
+                      </nav>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
+          ) : (
+            /* SINGLE CHOCOLATE: INDIVIDUAL VIEW */
+            (() => {
+              const prod = products.find(p => p._id === selectedProductId);
+              if (!prod) return <div className="text-cream-medium/60 text-xs py-8 text-center bg-chocolate-dark/20 rounded-2xl border border-caramel-gold/5">Chocolate recipe not found.</div>;
+              return (
+                <div className="glass-panel rounded-3xl border border-caramel-gold/15 p-6 md:p-8 shadow-xl animate-fade-in flex flex-col md:flex-row gap-8">
+                  {/* Left Column: Product Image */}
+                  <div className="w-full md:w-1/3 flex-shrink-0 bg-chocolate-darker border border-caramel-gold/15 rounded-2xl overflow-hidden flex items-center justify-center relative min-h-[220px]">
+                    <img
+                      src={
+                        prod.image.startsWith('http')
+                          ? prod.image
+                          : `http://localhost:5000${prod.image}`
+                      }
+                      alt={prod.name}
+                      className="w-full h-full object-cover transition-transform duration-500"
+                      onError={(e) => {
+                        e.target.src = 'https://images.unsplash.com/photo-1549007994-cb92ca8a7a72?q=80&w=600&auto=format&fit=crop';
+                      }}
+                    />
+                    <span className="absolute top-3 left-3 bg-chocolate-darker/80 border border-caramel-gold/20 text-caramel-gold text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">
+                      {prod.category?.name || 'Artisanal'}
+                    </span>
+                  </div>
+
+                  {/* Right Column: Details & Actions */}
+                  <div className="flex-1 flex flex-col justify-between gap-6">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-caramel-gold uppercase tracking-widest font-extrabold">
+                          Recipe Details &bull; CHOC-{prod._id.slice(-6).toUpperCase()}
+                        </span>
+                        <h2 className="text-2xl font-extrabold text-cream-light">
+                          {prod.name}
+                        </h2>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-chocolate-darker/40 border border-caramel-gold/5 p-4 rounded-2xl text-xs font-semibold">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-cream-medium/40 text-[10px] uppercase">Price</span>
+                          <span className="text-cream-light font-extrabold text-sm">₹{prod.price.toFixed(2)}</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-cream-medium/40 text-[10px] uppercase">Stock Status</span>
+                          <span className={`font-bold ${prod.stock === 0 ? 'text-red-400' : 'text-cream-light'}`}>
+                            {prod.stock === 0 ? 'Out of Stock' : `${prod.stock} Units`}
+                          </span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-cream-medium/40 text-[10px] uppercase">Cocoa Content</span>
+                          <span className="text-caramel-gold font-bold">{prod.cocoaPercentage}% Cocoa</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-cream-medium/40 text-[10px] uppercase">Nut Allergens</span>
+                          <span className={prod.isNutFree ? 'text-emerald-400 font-bold' : 'text-cream-medium/50'}>
+                            {prod.isNutFree ? 'Nut Free' : 'Contains Nuts'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <span className="text-cream-light font-bold text-xs uppercase tracking-wider">Description</span>
+                        <p className="text-cream-medium/70 text-xs leading-relaxed font-normal bg-chocolate-darker/20 p-4 rounded-xl border border-caramel-gold/5">
+                          {prod.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex justify-end gap-3 border-t border-caramel-gold/10 pt-5">
+                      <button
+                        onClick={() => openEditProductForm(prod)}
+                        className="flex items-center gap-2 border border-caramel-gold/30 hover:bg-caramel-gold hover:text-chocolate-darker text-cream-light text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all cursor-pointer"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                        Edit Chocolate
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleDeleteProduct(prod._id);
+                          setSelectedProductId('all');
+                        }}
+                        className="flex items-center gap-2 border border-red-500/30 hover:bg-red-500 hover:text-cream-light text-red-400 text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete Chocolate
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()
           )}
         </div>
       )}
@@ -583,7 +913,7 @@ const AdminScreen = () => {
                           {new Date(ord.createdAt).toLocaleDateString()}
                         </td>
                         <td className="py-3 px-2 text-center text-cream-light font-extrabold">
-                          ${ord.totalPrice.toFixed(2)}
+                          ₹{ord.totalPrice.toFixed(2)}
                         </td>
                         <td className="py-3 px-2 text-center">
                           {ord.isPaid ? (
@@ -601,15 +931,14 @@ const AdminScreen = () => {
                         </td>
                         <td className="py-3 px-2 text-center">
                           <span
-                            className={`inline-block px-2.5 py-1 border rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                              {
+                            className={`inline-block px-2.5 py-1 border rounded-full text-[9px] font-bold uppercase tracking-wider ${{
                                 Pending: 'border-amber-500/30 text-amber-400 bg-amber-500/5',
                                 Processing: 'border-blue-500/30 text-blue-400 bg-blue-500/5',
                                 Shipped: 'border-purple-500/30 text-purple-400 bg-purple-500/5',
                                 Delivered: 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5',
                                 Cancelled: 'border-red-500/30 text-red-400 bg-red-500/5',
                               }[ord.status] || 'border-caramel-gold/20 text-cream-medium'
-                            }`}
+                              }`}
                           >
                             {ord.status}
                           </span>
@@ -706,11 +1035,10 @@ const AdminScreen = () => {
                             <button
                               onClick={() => handleDeleteUser(user._id)}
                               disabled={userInfo && userInfo._id === user._id}
-                              className={`p-1.5 rounded-lg border transition-colors ${
-                                userInfo && userInfo._id === user._id
+                              className={`p-1.5 rounded-lg border transition-colors ${userInfo && userInfo._id === user._id
                                   ? 'border-cream-medium/5 text-cream-medium/10 cursor-not-allowed'
                                   : 'border-red-500/10 text-cream-medium hover:text-red-400 hover:border-red-500/30'
-                              }`}
+                                }`}
                               title={userInfo && userInfo._id === user._id ? "You cannot delete yourself" : "Delete user"}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -726,11 +1054,12 @@ const AdminScreen = () => {
           )}
         </div>
       )}
+      </div>
 
       {/* MODAL / OVERLAY: USER FORM (CREATE / EDIT) */}
       {showUserForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-chocolate-darker/80 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto">
-          <div className="w-full max-w-xl bg-chocolate-dark border border-caramel-gold/20 rounded-3xl p-6 flex flex-col gap-6 shadow-2xl relative animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-chocolate-darker/80 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto py-8 lg:py-16">
+          <div className="w-full max-w-xl bg-chocolate-dark border border-caramel-gold/20 rounded-3xl p-6 flex flex-col gap-6 shadow-2xl relative animate-fade-in my-auto">
             <button
               onClick={closeUserForm}
               className="absolute right-4 top-4 text-cream-medium hover:text-caramel-gold"
@@ -805,15 +1134,13 @@ const AdminScreen = () => {
                   checked={userIsAdmin}
                   onChange={(e) => setUserIsAdmin(e.target.checked)}
                   disabled={userInfo && userInfo._id === editingUserId}
-                  className={`w-5 h-5 rounded border-caramel-gold/20 bg-chocolate-darker text-caramel-gold accent-caramel-gold focus:ring-transparent ${
-                    userInfo && userInfo._id === editingUserId ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                  }`}
+                  className={`w-5 h-5 rounded border-caramel-gold/20 bg-chocolate-darker text-caramel-gold accent-caramel-gold focus:ring-transparent ${userInfo && userInfo._id === editingUserId ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                    }`}
                 />
                 <label
                   htmlFor="isAdminModal"
-                  className={`text-cream-light uppercase ${
-                    userInfo && userInfo._id === editingUserId ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                  }`}
+                  className={`text-cream-light uppercase ${userInfo && userInfo._id === editingUserId ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                    }`}
                 >
                   Administrator Account Role
                 </label>
@@ -849,8 +1176,8 @@ const AdminScreen = () => {
 
       {/* MODAL / OVERLAY: PRODUCT FORM (CREATE / EDIT) */}
       {showProductForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-chocolate-darker/80 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto">
-          <div className="w-full max-w-xl bg-chocolate-dark border border-caramel-gold/20 rounded-3xl p-6 flex flex-col gap-6 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-chocolate-darker/80 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto py-8 lg:py-16">
+          <div className="w-full max-w-xl bg-chocolate-dark border border-caramel-gold/20 rounded-3xl p-6 flex flex-col gap-6 shadow-2xl relative my-auto">
             <button
               onClick={closeProductForm}
               className="absolute right-4 top-4 text-cream-medium hover:text-caramel-gold"
@@ -880,7 +1207,7 @@ const AdminScreen = () => {
 
                 {/* Price */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-cream-light uppercase">Price ($)</label>
+                  <label className="text-cream-light uppercase">Price (₹)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -1026,8 +1353,8 @@ const AdminScreen = () => {
 
       {/* MODAL / OVERLAY: CATEGORY FORM (CREATE / EDIT) */}
       {showCategoryForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-chocolate-darker/80 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto">
-          <div className="w-full max-w-xl bg-chocolate-dark border border-caramel-gold/20 rounded-3xl p-6 flex flex-col gap-6 shadow-2xl relative animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-chocolate-darker/80 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto py-8 lg:py-16">
+          <div className="w-full max-w-xl bg-chocolate-dark border border-caramel-gold/20 rounded-3xl p-6 flex flex-col gap-6 shadow-2xl relative animate-fade-in my-auto">
             <button
               onClick={closeCategoryForm}
               className="absolute right-4 top-4 text-cream-medium hover:text-caramel-gold"
