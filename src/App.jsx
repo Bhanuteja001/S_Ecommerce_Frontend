@@ -19,6 +19,7 @@ import OrderScreen from './screens/OrderScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import AdminScreen from './screens/AdminScreen';
 import AdminLoginScreen from './screens/AdminLoginScreen';
+import NotFoundScreen from './screens/NotFoundScreen';
 
 function App() {
   return (
@@ -50,8 +51,8 @@ function App() {
               <Route path="/admin" element={<AdminScreen />} />
               <Route path="/admin-login" element={<AdminLoginScreen />} />
 
-              {/* Redirect anything else to Home */}
-              <Route path="*" element={<Navigate to="/" replace />} />
+              {/* 404 Custom Error Route */}
+              <Route path="*" element={<NotFoundScreen />} />
             </Routes>
           </main>
           

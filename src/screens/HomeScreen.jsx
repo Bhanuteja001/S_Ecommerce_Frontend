@@ -1,12 +1,18 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
-import { Award, Heart, HelpCircle, Leaf, Sparkles, ArrowRight } from 'lucide-react';
+import { Award, Heart, HelpCircle, Leaf, Sparkles, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fetchCategories } from '../slices/categorySlice';
 import { fetchProducts } from '../slices/productSlice';
 import ProductCard from '../components/ProductCard';
 import Spinner from '../components/Spinner';
 import Alert from '../components/Alert';
+
+// Import chocolate assets for sliding banners
+import darkChocolateBanner from '../assets/Dark Chocolates/DarkChocolate2.png';
+import milkChocolateBanner from '../assets/Milk Chocolates/1781617773.png';
+import trufflesBanner from '../assets/Truffles & Pralines/1781620022.png';
+import whiteChocolateBanner from '../assets/White Chocolates/1781618553.png';
 
 const HomeScreen = () => {
   const dispatch = useDispatch();
@@ -14,6 +20,52 @@ const HomeScreen = () => {
 
   const { categories, loading: catLoading, error: catError } = useSelector((state) => state.categories);
   const { products, loading: prodLoading, error: prodError } = useSelector((state) => state.products);
+
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const slides = [
+    {
+      image: darkChocolateBanner,
+      tag: 'Dark Chocolates',
+      title: 'Exquisite Dark Selection',
+      subtitle: 'Experience the intense depth of our single-origin dark chocolates conched to perfection.',
+      buttonText: 'Shop Dark Collection',
+      searchCategory: 'Dark Chocolates',
+    },
+    {
+      image: milkChocolateBanner,
+      tag: 'Milk Chocolates',
+      title: 'Silky Smooth Milk Chocolates',
+      subtitle: 'Indulge in the rich, creamy texture of our handcrafted Belgian-style milk chocolates.',
+      buttonText: 'Shop Milk Collection',
+      searchCategory: 'Milk Chocolates',
+    },
+    {
+      image: trufflesBanner,
+      tag: 'Truffles & Pralines',
+      title: 'Artisanal Truffles & Pralines',
+      subtitle: 'Handcrafted masterworks filled with decadent ganache, caramel, and roasted nuts.',
+      buttonText: 'Shop Truffles',
+      searchCategory: 'Truffles & Pralines',
+    },
+    {
+      image: whiteChocolateBanner,
+      tag: 'White Chocolates',
+      title: 'Velvety White Selection',
+      subtitle: 'Delicate and aromatic white chocolate bars, blended with organic bourbon vanilla.',
+      buttonText: 'Shop White Collection',
+      searchCategory: 'White Chocolates',
+    },
+  ];
+
+  // Auto-scroll logic for banners
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 6000); // Scroll every 6 seconds
+
+    return () => clearInterval(timer);
+  }, [slides.length]);
 
   useEffect(() => {
     dispatch(fetchCategories());
@@ -25,6 +77,26 @@ const HomeScreen = () => {
     navigate(`/shop?category=${categoryId}`);
   };
 
+  // Handle slide button click to redirect to shop category dynamically
+  const handleSlideClick = (categoryName) => {
+    const found = categories.find(
+      (c) => c.name.toLowerCase() === categoryName.toLowerCase()
+    );
+    if (found) {
+      navigate(`/shop?category=${found._id}`);
+    } else {
+      navigate('/shop');
+    }
+  };
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+
   const getCategoryImageUrl = (imagePath) => {
     if (!imagePath) return '/uploads/placeholder-category.jpg';
     if (imagePath.startsWith('http')) return imagePath;
@@ -33,36 +105,86 @@ const HomeScreen = () => {
 
   return (
     <div className="flex flex-col gap-16 pb-12">
-      {/* 1. Hero Banner */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-chocolate-dark via-chocolate-medium to-chocolate-darker border-b border-caramel-gold/15 py-24 sm:py-32 px-4 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#d4af37_1.5px,transparent_1.5px)] [background-size:24px_24px]"></div>
-        
-        <div className="relative max-w-5xl mx-auto text-center flex flex-col items-center gap-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-caramel-gold/30 bg-caramel-gold/5 text-caramel-gold text-xs font-semibold tracking-wider uppercase animate-pulse">
-            <Sparkles className="w-3.5 h-3.5" />
-            Artisanal & Handcrafted
+      {/* 1. Interactive Luxury Sliding Banners */}
+      <section className="relative overflow-hidden border-b border-caramel-gold/15 bg-chocolate-darker h-[450px] sm:h-[550px] md:h-[600px] w-full">
+        {/* Slides list */}
+        {slides.map((slide, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 transition-all duration-[1200ms] ease-in-out ${
+              index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
+            }`}
+          >
+            {/* Background image with zoom effect */}
+            <img
+              src={slide.image}
+              alt={slide.title}
+              className={`absolute inset-0 w-full h-full object-cover select-none transition-transform duration-[6000ms] ease-out ${
+                index === currentSlide ? 'scale-100' : 'scale-105'
+              }`}
+            />
+            {/* Warm dark overlay */}
+            <div className="absolute inset-0 bg-gradient-to-r from-chocolate-darker via-chocolate-darker/60 to-transparent z-10"></div>
+            <div className="absolute inset-0 bg-chocolate-darker/20 z-10"></div>
+
+            {/* Slide text details */}
+            <div className="absolute inset-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-start z-20">
+              <div className="max-w-xl text-left flex flex-col items-start gap-4 sm:gap-5 animate-fade-in">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-caramel-gold/30 bg-chocolate-darker/70 text-caramel-gold text-[10px] font-bold tracking-widest uppercase backdrop-blur-sm shadow-md">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {slide.tag}
+                </span>
+                
+                <h1 className="text-3xl sm:text-5xl font-extrabold text-cream-light uppercase tracking-tight leading-tight font-sans">
+                  {slide.title}
+                </h1>
+                
+                <p className="text-xs sm:text-sm text-cream-medium/80 leading-relaxed max-w-lg">
+                  {slide.subtitle}
+                </p>
+                
+                <button
+                  onClick={() => handleSlideClick(slide.searchCategory)}
+                  className="inline-flex items-center gap-2 font-bold uppercase tracking-wider text-[10px] sm:text-xs text-chocolate-darker bg-caramel-gold hover:bg-caramel-hover px-6 py-3.5 sm:px-7 sm:py-4 rounded-full transition-all duration-300 shadow-lg shadow-caramel-gold/15 hover:shadow-caramel-gold/25 group cursor-pointer"
+                >
+                  {slide.buttonText}
+                  <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+                </button>
+              </div>
+            </div>
           </div>
-          
-          <h1 className="text-4xl sm:text-6xl font-extrabold text-cream-light tracking-tight leading-none uppercase font-sans">
-            Indulge in Pure <br />
-            <span className="bg-gradient-to-r from-caramel-gold via-cream-light to-caramel-gold bg-clip-text text-transparent">
-              Cocoa Perfection
-            </span>
-          </h1>
-          
-          <p className="text-base sm:text-lg text-cream-medium/75 max-w-2xl leading-relaxed">
-            Experience the velvety smoothness of single-origin luxury chocolates, crafted by master chocolatiers with premium ingredients and direct-trade cocoa beans.
-          </p>
-          
-          <div className="flex gap-4 mt-4">
-            <Link
-              to="/shop"
-              className="flex items-center gap-2 font-bold uppercase tracking-wider text-chocolate-darker bg-caramel-gold hover:bg-caramel-hover px-8 py-4 rounded-full transition-all duration-300 shadow-lg shadow-caramel-gold/25"
-            >
-              Shop Collection
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
+        ))}
+
+        {/* Left Arrow Control */}
+        <button
+          onClick={prevSlide}
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border border-caramel-gold/20 bg-chocolate-darker/60 hover:bg-caramel-gold hover:text-chocolate-darker text-caramel-gold transition-all duration-300 backdrop-blur-sm hover:scale-105 active:scale-95 cursor-pointer"
+          aria-label="Previous Slide"
+        >
+          <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+        </button>
+
+        {/* Right Arrow Control */}
+        <button
+          onClick={nextSlide}
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border border-caramel-gold/20 bg-chocolate-darker/60 hover:bg-caramel-gold hover:text-chocolate-darker text-caramel-gold transition-all duration-300 backdrop-blur-sm hover:scale-105 active:scale-95 cursor-pointer"
+          aria-label="Next Slide"
+        >
+          <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+        </button>
+
+        {/* Bottom Dot Indicators */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex gap-2">
+          {slides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`h-2 transition-all duration-300 rounded-full cursor-pointer ${
+                index === currentSlide ? 'w-6 bg-caramel-gold' : 'w-2 bg-cream-light/30 hover:bg-cream-light/60'
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
         </div>
       </section>
 
